@@ -56,7 +56,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         print(f"Connecting to Deepgram: {deepgram_url}")
-        async with websockets.connect(deepgram_url, extra_headers=headers) as deepgram_ws:
+        # In websockets v13+, extra_headers was renamed to additional_headers
+        async with websockets.connect(deepgram_url, additional_headers=headers) as deepgram_ws:
             print("Deepgram connected successfully.")
 
             # 1. Configure Deepgram Agent
