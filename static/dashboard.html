@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #e2e8f0;
+            --accent: #3b82f6;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2 {
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--card);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: none;
+            background-color: var(--accent);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background-color: #059669;
+            color: #ecfdf5;
+        }
+
+        .status-in-progress {
+            background-color: #d97706;
+            color: #fffbeb;
+        }
+
+        .transcript-box {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+            color: #cbd5e1;
+            background: #0f172a;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Voice Agent Dashboard</h1>
+
+        <div class="grid">
+            <!-- Trigger Call Section -->
+            <div class="card">
+                <h2>Trigger New Call</h2>
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="name" placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number (E.164)</label>
+                    <input type="tel" id="phone" placeholder="e.g. +1234567890">
+                </div>
+                <div class="form-group">
+                    <label>Days Due</label>
+                    <input type="number" id="days_due" value="3">
+                </div>
+                <button onclick="triggerCall()" id="callBtn">Call Customer</button>
+                <p id="statusMsg" style="margin-top: 1rem; font-size: 0.875rem;"></p>
+            </div>
+
+            <!-- Logs Section -->
+            <div class="card">
+                <h2>Live Call Logs</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Transcript</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTable">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check auth
+        if (!localStorage.getItem('auth')) {
+            window.location.href = '/static/login.html';
+        }
+
+        async function triggerCall() {
+            const btn = document.getElementById('callBtn');
+            const msg = document.getElementById('statusMsg');
+            const phone = document.getElementById('phone').value;
+            const name = document.getElementById('name').value;
+            const days_due = document.getElementById('days_due').value;
+
+            if (!phone) {
+                alert("Phone number is required!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Calling...";
+            msg.innerText = "";
+
+            try {
+                const res = await fetch('/api/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: phone, name, days_due: parseInt(days_due) })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    msg.innerText = "Call initiated! SID: " + data.call_sid;
+                    msg.style.color = "#4ade80";
+                    fetchLogs(); // Refresh logs immediately
+                } else {
+                    msg.innerText = "Error: " + data.detail;
+                    msg.style.color = "#ef4444";
+                }
+            } catch (e) {
+                msg.innerText = "Network Error";
+                msg.style.color = "#ef4444";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Call Customer";
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                const tbody = document.getElementById('logsTable');
+                tbody.innerHTML = '';
+
+                logs.reverse().forEach(log => {
+                    const row = document.createElement('tr');
+                    const statusClass = log.status === 'completed' ? 'status-completed' : 'status-in-progress';
+
+                    row.innerHTML = `
+                        <td>${new Date(log.timestamp * 1000).toLocaleTimeString()}</td>
+                        <td>${log.phone_number}</td>
+                        <td><span class="status-badge ${statusClass}">${log.status}</span></td>
+                        <td><div class="transcript-box">${log.transcript || '...'}</div></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (e) {
+                console.error("Failed to fetch logs", e);
+            }
+        }
+
+        // Poll logs every 2 seconds
+        setInterval(fetchLogs, 2000);
+        fetchLogs();
+    </script>
+</body>
+
+</html>
