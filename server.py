@@ -47,7 +47,7 @@ async def websocket_endpoint(websocket: WebSocket):
     print("Twilio connected.")
 
     # Deepgram Voice Agent URL
-    deepgram_url = "wss://agent.deepgram.com/agent"
+    deepgram_url = "wss://agent.deepgram.com/v1/agent/converse"
     
     # Headers for Deepgram authentication
     headers = {
