@@ -8,8 +8,7 @@ load_dotenv()
 account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
 from_number = os.getenv("TWILIO_PHONE_NUMBER")
-# Replace with your ngrok URL (e.g., "https://your-ngrok-url.ngrok-free.app")
-# You must update this every time you restart ngrok!
+
 SERVER_URL = "https://voiceagent-918i.onrender.com" 
 
 client = Client(account_sid, auth_token)
