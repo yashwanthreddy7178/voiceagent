@@ -57,7 +57,8 @@
         }
 
         input,
-        textarea {
+        textarea,
+        select {
             width: 100%;
             padding: 0.75rem;
             border-radius: 0.5rem;
@@ -154,6 +155,18 @@
                         <input id="name" type="text" placeholder="John Doe" required>
                     </div>
                     <div class="form-group">
+                        <label for="carrier">Customer Carrier</label>
+                        <select id="carrier" required>
+                            <option value="Total Wireless">Total Wireless</option>
+                            <option value="Verizon">Verizon</option>
+                            <option value="AT&T">AT&T</option>
+                            <option value="T-Mobile">T-Mobile</option>
+                            <option value="Mint Mobile">Mint Mobile</option>
+                            <option value="Boost Mobile">Boost Mobile</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="days">Days Due</label>
                         <input id="days" type="number" placeholder="e.g. 3" required>
                     </div>
@@ -178,6 +191,7 @@
                             <tr>
                                 <th>Time</th>
                                 <th>Phone</th>
+                                <th>Carrier</th>
                                 <th>Status</th>
                                 <th>Transcript</th>
                             </tr>
@@ -202,6 +216,7 @@
             const btn = document.getElementById('callBtn');
             const phone = document.getElementById('phone').value;
             const name = document.getElementById('name').value;
+            const carrier = document.getElementById('carrier').value;
             const days = document.getElementById('days').value;
             const dueDate = document.getElementById('dueDate').value;
             const referral = document.getElementById('referral').value;
@@ -216,6 +231,7 @@
                     body: JSON.stringify({
                         phone_number: phone,
                         name: name,
+                        carrier: carrier,
                         days_due: parseInt(days),
                         due_date: dueDate,
                         referral_info: referral
@@ -250,10 +266,12 @@
                     const tr = document.createElement('tr');
                     const date = new Date(log.timestamp * 1000).toLocaleTimeString();
                     const statusClass = log.status === 'completed' ? 'status-completed' : 'status-in-progress';
+                    const carrier = log.customer_data ? log.customer_data.carrier : '-';
 
                     tr.innerHTML = `
                         <td>${date}</td>
                         <td>${log.phone_number}</td>
+                        <td>${carrier}</td>
                         <td><span class="status-badge ${statusClass}">${log.status}</span></td>
                         <td><div class="transcript-box">${log.transcript || '-'}</div></td>
                     `;

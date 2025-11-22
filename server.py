@@ -48,6 +48,7 @@ class LoginRequest(BaseModel):
 class CallRequest(BaseModel):
     phone_number: str
     name: str
+    carrier: str
     days_due: int
     due_date: str
     referral_info: str
@@ -148,6 +149,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # 2. Lookup Call Data from Supabase
         customer_name = ""
+        carrier = ""
         days_due = 0
         due_date = ""
         referral_info = ""
@@ -161,6 +163,7 @@ async def websocket_endpoint(websocket: WebSocket):
             if response.data:
                 data = response.data[0].get('customer_data', {})
                 customer_name = data.get('name', "")
+                carrier = data.get('carrier', "")
                 days_due = data.get('days_due', 0)
                 due_date = data.get('due_date', "")
                 referral_info = data.get('referral_info', "")
@@ -168,8 +171,30 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"Warning: No log found for call {call_sid}")
         
         # 3. Construct Dynamic Prompt
-        system_prompt = f"You are Mike, calling from Total wireless new Kensington store. Your goal is to remind {customer_name} that their bill is due. Start by asking how they are doing. Wait for their response. Then, say 'I am just giving you a quick courtesy call to remind you that your bill will be due in {days_due} days that's on {due_date}. I just wanted to make sure everything's on track so there aren't any interruptions to your service.' Finally, mention: {referral_info}. Keep the conversation short, friendly, and professional."
-        print(f"Using prompt: {system_prompt}")
+        if carrier == "Total Wireless":
+            system_prompt = f"""You are Sarah, calling from Total Wireless New Kensington store. Your goal is to remind {customer_name} that their bill is due. 
+            
+            Instructions:
+            1. Start by asking how they are doing and WAIT for their response. Do not rush.
+            2. Once they respond, say: "I'm just giving you a quick courtesy call to remind you that your bill is due in {days_due} days, on {due_date}."
+            3. Then immediately ask: "I just wanted to make sure everything is on track so there aren't any interruptions to your service?" and WAIT for their response.
+            4. If they say yes/good, mention: "{referral_info}"
+            5. Keep your responses short (under 2 sentences).
+            6. Be friendly and professional. Do not sound like a robot reading a script.
+            """
+        else:
+            system_prompt = f"""You are Sarah, calling from Total Wireless New Kensington store. Your goal is to introduce yourself and tell {customer_name} about current promotions.
+            
+            Instructions:
+            1. Start by asking how they are doing and WAIT for their response.
+            2. Once they respond, say: "I see you are currently with {carrier}. I wanted to let you know about some great promotions we have running right now if you switch to Total Wireless."
+            3. Then mention the promotion details: "{referral_info}"
+            4. Ask if they would be interested in stopping by the store to learn more.
+            5. Keep your responses short (under 2 sentences).
+            6. Be friendly, professional, and persuasive but not pushy.
+            """
+        
+        print(f"Using prompt for {carrier}: {system_prompt}")
 
         # Deepgram Voice Agent URL
         deepgram_url = "wss://agent.deepgram.com/v1/agent/converse"
