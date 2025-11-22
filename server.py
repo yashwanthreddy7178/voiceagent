@@ -153,7 +153,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "listen": {
                         "provider": {
                             "type": "deepgram",
-                            "model": "nova-2",
+                            "model": "nova-3",
                             "keyterms": ["hello", "goodbye"]
                         }
                     },
