@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Connect
 from dotenv import load_dotenv
+from supabase import create_client, Client as SupabaseClient
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configuration
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -31,12 +34,12 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123") # Default password
 if not DEEPGRAM_API_KEY or not TWILIO_ACCOUNT_SID:
     print("Error: API keys must be set in .env")
 
-# Twilio Client
-twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("Warning: Supabase keys not set. Logs will fail.")
 
-# In-memory storage for call logs
-# Structure: { "call_sid": { "timestamp": 123, "phone_number": "+123", "status": "active", "transcript": "" } }
-calls_db = []
+# Clients
+twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+supabase: SupabaseClient = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # Pydantic Models
 class LoginRequest(BaseModel):
@@ -71,16 +74,16 @@ async def trigger_call(req: CallRequest):
             url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'localhost')}/incoming-call", # Auto-detect Render URL
         )
         
-        # Create log entry
-        log_entry = {
-            "call_sid": call.sid,
-            "timestamp": time.time(),
-            "phone_number": req.phone_number,
-            "status": "initiated",
-            "transcript": "",
-            "customer_data": req.model_dump()
-        }
-        calls_db.append(log_entry)
+        # Create log entry in Supabase
+        if supabase:
+            data = {
+                "call_sid": call.sid,
+                "phone_number": req.phone_number,
+                "status": "initiated",
+                "transcript": "",
+                "customer_data": req.model_dump()
+            }
+            supabase.table("calls").insert(data).execute()
         
         return {"status": "initiated", "call_sid": call.sid}
     except Exception as e:
@@ -89,7 +92,10 @@ async def trigger_call(req: CallRequest):
 
 @app.get("/api/logs")
 async def get_logs():
-    return calls_db
+    if not supabase:
+        return []
+    response = supabase.table("calls").select("*").order("created_at", desc=True).execute()
+    return response.data
 
 # --- Webhook & WebSocket ---
 
@@ -123,41 +129,43 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # 1. Wait for Twilio Start Event to get context
     try:
+        start_data = None
         while True:
             start_msg = await websocket.receive_text()
-            start_data = json.loads(start_msg)
-            if start_data.get('event') == 'start':
+            msg_json = json.loads(start_msg)
+            if msg_json.get('event') == 'start':
+                start_data = msg_json
                 break
-            elif start_data.get('event') == 'connected':
+            elif msg_json.get('event') == 'connected':
                 print("Twilio connected event received.")
                 continue
             else:
-                print(f"Ignored event before start: {start_data.get('event')}")
+                print(f"Ignored event before start: {msg_json.get('event')}")
 
         call_sid = start_data['start']['callSid']
         stream_sid = start_data['start']['streamSid']
         print(f"Twilio Stream started: {stream_sid} for Call: {call_sid}")
 
-        # 2. Lookup Call Data
+        # 2. Lookup Call Data from Supabase
         customer_name = ""
         days_due = 0
         due_date = ""
         referral_info = ""
-        found_log = None
-
-        for log in calls_db:
-            if log['call_sid'] == call_sid:
-                found_log = log
-                found_log['status'] = "active"
-                data = log.get('customer_data', {})
+        
+        if supabase:
+            # Update status to active
+            supabase.table("calls").update({"status": "active"}).eq("call_sid", call_sid).execute()
+            
+            # Fetch customer data
+            response = supabase.table("calls").select("customer_data").eq("call_sid", call_sid).execute()
+            if response.data:
+                data = response.data[0].get('customer_data', {})
                 customer_name = data.get('name', "")
                 days_due = data.get('days_due', 0)
                 due_date = data.get('due_date', "")
                 referral_info = data.get('referral_info', "")
-                break
-        
-        if not found_log:
-             print(f"Warning: No log found for call {call_sid}")
+            else:
+                print(f"Warning: No log found for call {call_sid}")
         
         # 3. Construct Dynamic Prompt
         system_prompt = f"You are Mike, calling from Total wireless new Kensington store. Your goal is to remind {customer_name} that their bill is due. Start by asking how they are doing. Wait for their response. Then, say 'I am just giving you a quick courtesy call to remind you that your bill will be due in {days_due} days that's on {due_date}. I just wanted to make sure everything's on track so there aren't any interruptions to your service.' Finally, mention: {referral_info}. Keep the conversation short, friendly, and professional."
@@ -169,11 +177,10 @@ async def websocket_endpoint(websocket: WebSocket):
         # Queues for decoupling
         audio_queue = asyncio.Queue()
         streamsid_queue = asyncio.Queue()
-        call_log_queue = asyncio.Queue()
+        # call_log_queue no longer needed as we write directly to DB
 
         # Pre-populate queues since we consumed the start event
         streamsid_queue.put_nowait(stream_sid)
-        call_log_queue.put_nowait(found_log)
 
         # Connect to Deepgram
         async with websockets.connect(
@@ -236,10 +243,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
             async def deepgram_receiver():
                 print("deepgram_receiver started")
-                # Wait for stream SID and call log
+                # Wait for stream SID
                 streamsid = await streamsid_queue.get()
-                call_log = await call_log_queue.get()
                 
+                current_transcript = ""
+
                 async for message in deepgram_ws:
                     if isinstance(message, str):
                         # print(f"Deepgram Text: {message}")
@@ -254,13 +262,19 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "streamSid": streamsid
                             }
                             await websocket.send_text(json.dumps(clear_message))
-                            if call_log: call_log['transcript'] += "\nUser: [Speaking...]"
+                            
+                            current_transcript += "\nUser: [Speaking...]"
+                            if supabase:
+                                supabase.table("calls").update({"transcript": current_transcript}).eq("call_sid", call_sid).execute()
                         
                         elif msg_type == 'ConversationText':
                             text = decoded.get('content')
                             role = decoded.get('role')
-                            if text and call_log:
-                                call_log['transcript'] += f"\n{role.capitalize()}: {text}"
+                            if text:
+                                line = f"\n{role.capitalize()}: {text}"
+                                current_transcript += line
+                                if supabase:
+                                    supabase.table("calls").update({"transcript": current_transcript}).eq("call_sid", call_sid).execute()
                                 
                         elif msg_type == 'Error':
                              print(f"DEEPGRAM ERROR: {decoded}")
@@ -293,6 +307,8 @@ async def websocket_endpoint(websocket: WebSocket):
                                 inbuffer.extend(chunk)
                         elif data["event"] == "stop":
                             print("Twilio stream stopped.")
+                            if supabase:
+                                supabase.table("calls").update({"status": "completed"}).eq("call_sid", call_sid).execute()
                             break
 
                         # Check buffer
@@ -314,8 +330,6 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket Error: {e}")
     finally:
         print("WebSocket connection closed.")
-
-
 
 if __name__ == "__main__":
     import uvicorn
