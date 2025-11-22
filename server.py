@@ -3,6 +3,7 @@ import json
 import asyncio
 import websockets
 import time
+import base64
 from fastapi import FastAPI, WebSocket, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -161,7 +162,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "type": "open_ai",
                             "model": "gpt-4o",
                         },
-                        "instructions": "You are Yash, calling from a retail store. Your goal is to remind the customer that their bill is due. Start by asking how they are doing. Wait for their response. Then, gently remind them about the bill. Finally, mention that there is a referral program running where they can earn points. Keep the conversation short, friendly, and professional."
+                        "prompt": "You are Yash, calling from a retail store. Your goal is to remind the customer that their bill is due. Start by asking how they are doing. Wait for their response. Then, gently remind them about the bill. Finally, mention that there is a referral program running where they can earn points. Keep the conversation short, friendly, and professional."
                     },
                     "speak": {
                         "provider": {
@@ -179,6 +180,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # --- Tasks ---
 
+            # Shared state for logging
+            call_log_queue = asyncio.Queue()
+
             async def deepgram_sender():
                 print("deepgram_sender started")
                 while True:
@@ -187,25 +191,35 @@ async def websocket_endpoint(websocket: WebSocket):
 
             async def deepgram_receiver():
                 print("deepgram_receiver started")
-                # Wait for stream SID
+                # Wait for stream SID and call log
                 streamsid = await streamsid_queue.get()
+                call_log = await call_log_queue.get()
                 
                 async for message in deepgram_ws:
                     if isinstance(message, str):
-                        print(f"Deepgram Text: {message}")
+                        # print(f"Deepgram Text: {message}")
                         decoded = json.loads(message)
+                        msg_type = decoded.get('type')
                         
                         # Handle barge-in
-                        if decoded.get('type') == 'UserStartedSpeaking':
+                        if msg_type == 'UserStartedSpeaking':
                             print("User speaking, clearing audio...")
                             clear_message = {
                                 "event": "clear",
                                 "streamSid": streamsid
                             }
                             await websocket.send_text(json.dumps(clear_message))
-                            
-                            # Log transcript
-                            # Note: We'd need to pass call_log context here if we want to log
+                            if call_log: call_log['transcript'] += "\nUser: [Speaking...]"
+                        
+                        elif msg_type == 'ConversationText':
+                            text = decoded.get('content')
+                            role = decoded.get('role')
+                            if text and call_log:
+                                call_log['transcript'] += f"\n{role.capitalize()}: {text}"
+                                
+                        elif msg_type == 'Error':
+                             print(f"DEEPGRAM ERROR: {decoded}")
+
                         continue
 
                     # Handle Audio
@@ -227,8 +241,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     async for message in websocket.iter_text():
                         data = json.loads(message)
                         if data["event"] == "start":
-                            print(f"Twilio Stream started: {data['start']['streamSid']}")
-                            streamsid_queue.put_nowait(data['start']['streamSid'])
+                            stream_sid = data['start']['streamSid']
+                            call_sid = data['start']['callSid']
+                            print(f"Twilio Stream started: {stream_sid}")
+                            streamsid_queue.put_nowait(stream_sid)
+                            
+                            # Find log entry
+                            found_log = None
+                            for log in calls_db:
+                                if log['call_sid'] == call_sid:
+                                    found_log = log
+                                    found_log['status'] = "active"
+                                    break
+                            call_log_queue.put_nowait(found_log)
+                            
                         elif data["event"] == "media":
                             media = data["media"]
                             chunk = base64.b64decode(media["payload"])
