@@ -20,14 +20,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configuration
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 PORT = int(os.getenv("PORT", 5000))
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123") # Default password
 
-if not DEEPGRAM_API_KEY or
 if not DEEPGRAM_API_KEY or not TWILIO_ACCOUNT_SID:
     print("Error: API keys must be set in .env")
 
