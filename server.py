@@ -250,7 +250,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "model": "aura-asteria-en"
                         }
                     },
-                    "greeting": "Hello! This is Mike calling from Total wireless new Kensington store. How are you doing today?"
+                    "greeting": "Hello! This is Sarah calling from Total wireless new Kensington store. How are you doing today?"
                 }
             }
             
