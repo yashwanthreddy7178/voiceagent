@@ -108,25 +108,7 @@ async def incoming_call(request: Request):
     
     return Response(content=str(response), media_type="application/xml")
 
-@app.websocket("/streams")
-async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for Twilio Media Streams.
-    Proxies audio between Twilio and Deepgram Voice Agent.
-    """
-    await websocket.accept()
-    print("Twilio connected.")
 
-    # Deepgram Voice Agent URL
-    deepgram_url = "wss://agent.deepgram.com/v1/agent/converse"
-    
-    # Headers for Deepgram authentication
-    headers = {
-        "Authorization": f"Token {DEEPGRAM_API_KEY}"
-    }
-
-    try:
-        print(f"Connecting to Deepgram: {deepgram_url}")
 @app.websocket("/streams")
 async def websocket_endpoint(websocket: WebSocket):
     """
