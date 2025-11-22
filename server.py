@@ -213,15 +213,19 @@ async def websocket_endpoint(websocket: WebSocket):
                         else:
                             # Text message (logs, metadata, transcript)
                             msg_data = json.loads(message)
-                            print(f"Deepgram Message: {msg_data.get('type')}") # Debug message types
+                            msg_type = msg_data.get('type')
+                            print(f"Deepgram Message: {msg_type}")
                             
-                            if msg_data.get('type') == 'UserStartedSpeaking':
+                            if msg_type == 'Error':
+                                print(f"DEEPGRAM ERROR DETAILS: {json.dumps(msg_data, indent=2)}")
+                            
+                            if msg_type == 'UserStartedSpeaking':
                                 if call_log: call_log['transcript'] += "\nUser: [Speaking...]"
-                            elif msg_data.get('type') == 'Results':
+                            elif msg_type == 'Results':
                                 transcript = msg_data['channel']['alternatives'][0]['transcript']
                                 if transcript and call_log:
                                     call_log['transcript'] += f"\nUser: {transcript}"
-                            elif msg_data.get('type') == 'AgentAudioDone':
+                            elif msg_type == 'AgentAudioDone':
                                 pass
                                 
                 except Exception as e:
