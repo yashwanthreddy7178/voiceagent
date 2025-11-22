@@ -123,12 +123,16 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # 1. Wait for Twilio Start Event to get context
     try:
-        start_msg = await websocket.receive_text()
-        start_data = json.loads(start_msg)
-        if start_data.get('event') != 'start':
-            print("Error: Expected start event")
-            await websocket.close()
-            return
+        while True:
+            start_msg = await websocket.receive_text()
+            start_data = json.loads(start_msg)
+            if start_data.get('event') == 'start':
+                break
+            elif start_data.get('event') == 'connected':
+                print("Twilio connected event received.")
+                continue
+            else:
+                print(f"Ignored event before start: {start_data.get('event')}")
 
         call_sid = start_data['start']['callSid']
         stream_sid = start_data['start']['streamSid']
