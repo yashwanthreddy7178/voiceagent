@@ -56,7 +56,8 @@
             color: #94a3b8;
         }
 
-        input {
+        input,
+        textarea {
             width: 100%;
             padding: 0.75rem;
             border-radius: 0.5rem;
@@ -143,38 +144,49 @@
             <!-- Trigger Call Section -->
             <div class="card">
                 <h2>Trigger New Call</h2>
-                <div class="form-group">
-                    <label>Customer Name</label>
-                    <input type="text" id="name" placeholder="e.g. John Doe">
-                </div>
-                <div class="form-group">
-                    <label>Phone Number (E.164)</label>
-                    <input type="tel" id="phone" placeholder="e.g. +1234567890">
-                </div>
-                <div class="form-group">
-                    <label>Days Due</label>
-                    <input type="number" id="days_due" value="3">
-                </div>
-                <button onclick="triggerCall()" id="callBtn">Call Customer</button>
-                <p id="statusMsg" style="margin-top: 1rem; font-size: 0.875rem;"></p>
+                <form id="callForm">
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input id="phone" type="text" placeholder="+1234567890" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Customer Name</label>
+                        <input id="name" type="text" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="days">Days Due</label>
+                        <input id="days" type="number" placeholder="e.g. 3" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dueDate">Due Date</label>
+                        <input id="dueDate" type="text" placeholder="e.g. Friday, Nov 24th" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="referral">Referral/Promo Info</label>
+                        <textarea id="referral" rows="3" placeholder="Enter referral details..." required></textarea>
+                    </div>
+                    <button type="submit" id="callBtn">Trigger Call</button>
+                </form>
             </div>
 
             <!-- Logs Section -->
             <div class="card">
                 <h2>Live Call Logs</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Phone</th>
-                            <th>Status</th>
-                            <th>Transcript</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logsTable">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Transcript</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTable">
+                            <!-- Logs will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -185,47 +197,49 @@
             window.location.href = '/static/login.html';
         }
 
-        async function triggerCall() {
+        document.getElementById('callForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
             const btn = document.getElementById('callBtn');
-            const msg = document.getElementById('statusMsg');
             const phone = document.getElementById('phone').value;
             const name = document.getElementById('name').value;
-            const days_due = document.getElementById('days_due').value;
-
-            if (!phone) {
-                alert("Phone number is required!");
-                return;
-            }
+            const days = document.getElementById('days').value;
+            const dueDate = document.getElementById('dueDate').value;
+            const referral = document.getElementById('referral').value;
 
             btn.disabled = true;
             btn.innerText = "Calling...";
-            msg.innerText = "";
 
             try {
                 const res = await fetch('/api/call', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone_number: phone, name, days_due: parseInt(days_due) })
+                    body: JSON.stringify({
+                        phone_number: phone,
+                        name: name,
+                        days_due: parseInt(days),
+                        due_date: dueDate,
+                        referral_info: referral
+                    })
                 });
-                const data = await res.json();
                 if (res.ok) {
-                    msg.innerText = "Call initiated! SID: " + data.call_sid;
-                    msg.style.color = "#4ade80";
-                    fetchLogs(); // Refresh logs immediately
+                    alert('Call initiated!');
+                    loadLogs();
+                    // Optional: clear form
+                    // document.getElementById('callForm').reset();
                 } else {
-                    msg.innerText = "Error: " + data.detail;
-                    msg.style.color = "#ef4444";
+                    const err = await res.json();
+                    alert('Error: ' + (err.detail || 'Unknown error'));
                 }
-            } catch (e) {
-                msg.innerText = "Network Error";
-                msg.style.color = "#ef4444";
+            } catch (err) {
+                console.error(err);
+                alert('Network Error');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Call Customer";
+                btn.innerText = "Trigger Call";
             }
-        }
+        });
 
-        async function fetchLogs() {
+        async function loadLogs() {
             try {
                 const res = await fetch('/api/logs');
                 const logs = await res.json();
@@ -233,25 +247,26 @@
                 tbody.innerHTML = '';
 
                 logs.reverse().forEach(log => {
-                    const row = document.createElement('tr');
+                    const tr = document.createElement('tr');
+                    const date = new Date(log.timestamp * 1000).toLocaleTimeString();
                     const statusClass = log.status === 'completed' ? 'status-completed' : 'status-in-progress';
 
-                    row.innerHTML = `
-                        <td>${new Date(log.timestamp * 1000).toLocaleTimeString()}</td>
+                    tr.innerHTML = `
+                        <td>${date}</td>
                         <td>${log.phone_number}</td>
                         <td><span class="status-badge ${statusClass}">${log.status}</span></td>
-                        <td><div class="transcript-box">${log.transcript || '...'}</div></td>
+                        <td><div class="transcript-box">${log.transcript || '-'}</div></td>
                     `;
-                    tbody.appendChild(row);
+                    tbody.appendChild(tr);
                 });
-            } catch (e) {
-                console.error("Failed to fetch logs", e);
+            } catch (err) {
+                console.error(err);
             }
         }
 
-        // Poll logs every 2 seconds
-        setInterval(fetchLogs, 2000);
-        fetchLogs();
+        // Poll logs every 5 seconds
+        setInterval(loadLogs, 5000);
+        loadLogs();
     </script>
 </body>
 

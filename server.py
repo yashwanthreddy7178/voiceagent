@@ -44,8 +44,10 @@ class LoginRequest(BaseModel):
 
 class CallRequest(BaseModel):
     phone_number: str
-    name: str = "Customer"
-    days_due: int = 3
+    name: str
+    days_due: int
+    due_date: str
+    referral_info: str
 
 # --- API Endpoints ---
 
@@ -119,22 +121,64 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("Twilio connected.")
 
-    # Deepgram Voice Agent URL
-    deepgram_url = "wss://agent.deepgram.com/v1/agent/converse"
-    
-    # Queues for decoupling
-    audio_queue = asyncio.Queue()
-    streamsid_queue = asyncio.Queue()
-
+    # 1. Wait for Twilio Start Event to get context
     try:
-        # Connect to Deepgram using subprotocols for auth (as per example)
+        start_msg = await websocket.receive_text()
+        start_data = json.loads(start_msg)
+        if start_data.get('event') != 'start':
+            print("Error: Expected start event")
+            await websocket.close()
+            return
+
+        call_sid = start_data['start']['callSid']
+        stream_sid = start_data['start']['streamSid']
+        print(f"Twilio Stream started: {stream_sid} for Call: {call_sid}")
+
+        # 2. Lookup Call Data
+        customer_name = ""
+        days_due = 0
+        due_date = ""
+        referral_info = ""
+        found_log = None
+
+        for log in calls_db:
+            if log['call_sid'] == call_sid:
+                found_log = log
+                found_log['status'] = "active"
+                data = log.get('customer_data', {})
+                customer_name = data.get('name', "")
+                days_due = data.get('days_due', 0)
+                due_date = data.get('due_date', "")
+                referral_info = data.get('referral_info', "")
+                break
+        
+        if not found_log:
+             print(f"Warning: No log found for call {call_sid}")
+        
+        # 3. Construct Dynamic Prompt
+        system_prompt = f"You are Mike, calling from Total wireless new Kensington store. Your goal is to remind {customer_name} that their bill is due. Start by asking how they are doing. Wait for their response. Then, say 'I am just giving you a quick courtesy call to remind you that your bill will be due in {days_due} days that's on {due_date}. I just wanted to make sure everything's on track so there aren't any interruptions to your service.' Finally, mention: {referral_info}. Keep the conversation short, friendly, and professional."
+        print(f"Using prompt: {system_prompt}")
+
+        # Deepgram Voice Agent URL
+        deepgram_url = "wss://agent.deepgram.com/v1/agent/converse"
+        
+        # Queues for decoupling
+        audio_queue = asyncio.Queue()
+        streamsid_queue = asyncio.Queue()
+        call_log_queue = asyncio.Queue()
+
+        # Pre-populate queues since we consumed the start event
+        streamsid_queue.put_nowait(stream_sid)
+        call_log_queue.put_nowait(found_log)
+
+        # Connect to Deepgram
         async with websockets.connect(
             deepgram_url, 
             subprotocols=["token", DEEPGRAM_API_KEY]
         ) as deepgram_ws:
             print("Deepgram connected successfully.")
 
-            # Configure Deepgram Agent (Structure from example)
+            # Configure Deepgram Agent
             config_message = {
                 "type": "Settings",
                 "audio": {
@@ -162,7 +206,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "type": "open_ai",
                             "model": "gpt-4o",
                         },
-                        "prompt": "You are Yash, calling from a retail store. Your goal is to remind the customer that their bill is due. Start by asking how they are doing. Wait for their response. Then, gently remind them about the bill. Finally, mention that there is a referral program running where they can earn points. Keep the conversation short, friendly, and professional."
+                        "prompt": system_prompt
                     },
                     "speak": {
                         "provider": {
@@ -170,7 +214,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "model": "aura-asteria-en"
                         }
                     },
-                    "greeting": "Hello! This is Yash from the store. How are you doing today?"
+                    "greeting": "Hello! This is Mike calling from Total wireless new Kensington store. How are you doing today?"
                 }
             }
             
@@ -179,9 +223,6 @@ async def websocket_endpoint(websocket: WebSocket):
             print("Config sent.")
 
             # --- Tasks ---
-
-            # Shared state for logging
-            call_log_queue = asyncio.Queue()
 
             async def deepgram_sender():
                 print("deepgram_sender started")
@@ -240,22 +281,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     async for message in websocket.iter_text():
                         data = json.loads(message)
-                        if data["event"] == "start":
-                            stream_sid = data['start']['streamSid']
-                            call_sid = data['start']['callSid']
-                            print(f"Twilio Stream started: {stream_sid}")
-                            streamsid_queue.put_nowait(stream_sid)
-                            
-                            # Find log entry
-                            found_log = None
-                            for log in calls_db:
-                                if log['call_sid'] == call_sid:
-                                    found_log = log
-                                    found_log['status'] = "active"
-                                    break
-                            call_log_queue.put_nowait(found_log)
-                            
-                        elif data["event"] == "media":
+                        # Note: 'start' event is already consumed in main loop
+                        if data["event"] == "media":
                             media = data["media"]
                             chunk = base64.b64decode(media["payload"])
                             if media["track"] == "inbound":
@@ -283,6 +310,8 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket Error: {e}")
     finally:
         print("WebSocket connection closed.")
+
+
 
 if __name__ == "__main__":
     import uvicorn
