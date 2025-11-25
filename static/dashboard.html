@@ -4,31 +4,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Agent Dashboard</title>
+    <title>VoiceAgent | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Using Phosphor Icons for premium look -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #e2e8f0;
-            --accent: #3b82f6;
+            --bg-color: #020617;
+            --sidebar-bg: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 2rem;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            transition: width 0.3s ease;
         }
 
-        h1,
-        h2 {
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             color: white;
+        }
+
+        .logo i {
+            color: var(--primary);
+            font-size: 1.75rem;
+        }
+
+        .nav-links {
+            list-style: none;
+            flex: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-info h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .user-info span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
         }
 
         .grid {
@@ -37,253 +151,412 @@
             gap: 2rem;
         }
 
-        .card {
-            background-color: var(--card);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        /* Form Styles */
+        /* Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Form Elements */
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         label {
             display: block;
             margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            color: #94a3b8;
-        }
-
-        input,
-        textarea,
-        select {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border: 1px solid #334155;
-            background-color: #0f172a;
-            color: white;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border: none;
-            background-color: var(--accent);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #2563eb;
-        }
-
-        button:disabled {
-            background-color: #475569;
-            cursor: not-allowed;
-        }
-
-        /* Table Styles */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 1rem;
-            border-bottom: 1px solid #334155;
-        }
-
-        th {
-            color: #94a3b8;
+            font-size: 0.85rem;
+            color: var(--text-muted);
             font-weight: 500;
         }
 
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.875rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
         .status-badge {
-            padding: 0.25rem 0.5rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-initiated {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+        }
+
+        .status-active {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
         }
 
         .status-completed {
-            background-color: #059669;
-            color: #ecfdf5;
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
         }
 
-        .status-in-progress {
-            background-color: #d97706;
-            color: #fffbeb;
+        .pulse {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 1.5s infinite;
         }
 
-        .transcript-box {
-            max-height: 100px;
-            overflow-y: auto;
-            font-size: 0.875rem;
-            color: #cbd5e1;
-            background: #0f172a;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .transcript-preview {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-muted);
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Voice Agent Dashboard</h1>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="ph ph-waves"></i>
+            VoiceAgent
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item">
+                <a href="#" class="nav-link active">
+                    <i class="ph ph-squares-four"></i>
+                    Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="ph ph-users"></i>
+                    Customers
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="ph ph-gear"></i>
+                    Settings
+                </a>
+            </li>
+        </ul>
+        <div class="user-profile">
+            <div class="avatar">A</div>
+            <div class="user-info">
+                <h4>Admin User</h4>
+                <span>Store Manager</span>
+            </div>
+            <i class="ph ph-sign-out" style="margin-left: auto; cursor: pointer; color: var(--text-muted);"
+                onclick="logout()"></i>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <button class="btn"
+                style="width: auto; padding: 0.5rem 1rem; background-color: var(--card-bg); border: 1px solid var(--border);">
+                <i class="ph ph-calendar-blank"></i> Today
+            </button>
+        </div>
 
         <div class="grid">
-            <!-- Trigger Call Section -->
+            <!-- Dialer Widget -->
             <div class="card">
-                <h2>Trigger New Call</h2>
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="ph ph-phone-call" style="color: var(--primary);"></i>
+                        Quick Dialer
+                    </div>
+                </div>
                 <form id="callForm">
                     <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input id="phone" type="text" placeholder="+1234567890" required>
+                        <label>Phone Number</label>
+                        <input id="phone" type="text" placeholder="+1 (555) 000-0000" required>
                     </div>
                     <div class="form-group">
-                        <label for="name">Customer Name</label>
-                        <input id="name" type="text" placeholder="John Doe" required>
+                        <label>Calling From (Your Store Number)</label>
+                        <input id="fromNumber" type="text" placeholder="+1 (555) 123-4567" required>
                     </div>
                     <div class="form-group">
-                        <label for="carrier">Customer Carrier</label>
+                        <label>Customer Name</label>
+                        <input id="name" type="text" placeholder="Jane Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Carrier</label>
                         <select id="carrier" required>
                             <option value="Total Wireless">Total Wireless</option>
                             <option value="Verizon">Verizon</option>
                             <option value="AT&T">AT&T</option>
                             <option value="T-Mobile">T-Mobile</option>
-                            <option value="Mint Mobile">Mint Mobile</option>
-                            <option value="Boost Mobile">Boost Mobile</option>
-                            <option value="Other">Other</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="days">Days Due</label>
-                        <input id="days" type="number" placeholder="e.g. 3" required>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Days Due</label>
+                            <input id="days" type="number" placeholder="3" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            <input id="dueDate" type="text" placeholder="Nov 24th" required>
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label for="dueDate">Due Date</label>
-                        <input id="dueDate" type="text" placeholder="e.g. Friday, Nov 24th" required>
+                        <label>Referral / Promo Info</label>
+                        <textarea id="referral" rows="2" placeholder="Special offer details..." required></textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="referral">Referral/Promo Info</label>
-                        <textarea id="referral" rows="3" placeholder="Enter referral details..." required></textarea>
-                    </div>
-                    <button type="submit" id="callBtn">Trigger Call</button>
+
+                    <button type="submit" id="callBtn" class="btn">
+                        <i class="ph ph-phone"></i>
+                        Initiate Call
+                    </button>
                 </form>
             </div>
 
-            <!-- Logs Section -->
+            <!-- Live Logs -->
             <div class="card">
-                <h2>Live Call Logs</h2>
-                <div style="overflow-x: auto;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="ph ph-broadcast" style="color: var(--success);"></i>
+                        Live Activity
+                    </div>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">Auto-refreshing</span>
+                </div>
+                <div class="table-container">
                     <table>
                         <thead>
                             <tr>
                                 <th>Time</th>
-                                <th>Phone</th>
-                                <th>Carrier</th>
+                                <th>Customer</th>
                                 <th>Status</th>
-                                <th>Transcript</th>
+                                <th>Latest Transcript</th>
                             </tr>
                         </thead>
                         <tbody id="logsTable">
-                            <!-- Logs will be inserted here -->
+                            <!-- Rows injected by JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        // Check auth
+        // Auth Check
         if (!localStorage.getItem('auth')) {
             window.location.href = '/static/login.html';
         }
 
+        function logout() {
+            localStorage.removeItem('auth');
+            window.location.href = '/static/login.html';
+        }
+
+        // Call Trigger Logic
         document.getElementById('callForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('callBtn');
-            const phone = document.getElementById('phone').value;
-            const name = document.getElementById('name').value;
-            const carrier = document.getElementById('carrier').value;
-            const days = document.getElementById('days').value;
-            const dueDate = document.getElementById('dueDate').value;
-            const referral = document.getElementById('referral').value;
+            const originalText = btn.innerHTML;
+
+            // Gather Data
+            const data = {
+                phone_number: document.getElementById('phone').value,
+                from_number: document.getElementById('fromNumber').value,
+                name: document.getElementById('name').value,
+                carrier: document.getElementById('carrier').value,
+                days_due: parseInt(document.getElementById('days').value),
+                due_date: document.getElementById('dueDate').value,
+                referral_info: document.getElementById('referral').value
+            };
 
             btn.disabled = true;
-            btn.innerText = "Calling...";
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Connecting...';
 
             try {
                 const res = await fetch('/api/call', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone_number: phone,
-                        name: name,
-                        carrier: carrier,
-                        days_due: parseInt(days),
-                        due_date: dueDate,
-                        referral_info: referral
-                    })
+                    body: JSON.stringify(data)
                 });
+
                 if (res.ok) {
-                    alert('Call initiated!');
-                    loadLogs();
-                    // Optional: clear form
-                    // document.getElementById('callForm').reset();
+                    // Success Animation/Toast could go here
+                    loadLogs(); // Refresh logs immediately
+                    // document.getElementById('callForm').reset(); // Optional reset
                 } else {
                     const err = await res.json();
-                    alert('Error: ' + (err.detail || 'Unknown error'));
+                    alert('Error: ' + (err.detail || 'Failed to initiate call'));
                 }
             } catch (err) {
                 console.error(err);
                 alert('Network Error');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Trigger Call";
+                btn.innerHTML = originalText;
             }
         });
 
+        // Logs Polling
         async function loadLogs() {
             try {
                 const res = await fetch('/api/logs');
                 const logs = await res.json();
                 const tbody = document.getElementById('logsTable');
-                tbody.innerHTML = '';
 
-                logs.reverse().forEach(log => {
-                    const tr = document.createElement('tr');
-                    const date = new Date(log.timestamp * 1000).toLocaleTimeString();
-                    const statusClass = log.status === 'completed' ? 'status-completed' : 'status-in-progress';
-                    const carrier = log.customer_data ? log.customer_data.carrier : '-';
+                // Simple render (in a real framework we'd diff this)
+                tbody.innerHTML = logs.slice(0, 10).map(log => { // Show last 10
+                    const date = new Date(log.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const customer = log.customer_data?.name || log.phone_number;
 
-                    tr.innerHTML = `
-                        <td>${date}</td>
-                        <td>${log.phone_number}</td>
-                        <td>${carrier}</td>
-                        <td><span class="status-badge ${statusClass}">${log.status}</span></td>
-                        <td><div class="transcript-box">${log.transcript || '-'}</div></td>
+                    let statusClass = 'status-completed';
+                    let icon = '';
+                    if (log.status === 'active' || log.status === 'initiated') {
+                        statusClass = 'status-active';
+                        icon = '<div class="pulse"></div>';
+                    }
+
+                    return `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${customer}</td>
+                            <td>
+                                <span class="status-badge ${statusClass}">
+                                    ${icon} ${log.status}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="transcript-preview" title="${log.transcript || ''}">
+                                    ${log.transcript || '<span style="opacity:0.5">No audio yet...</span>'}
+                                </div>
+                            </td>
+                        </tr>
                     `;
-                    tbody.appendChild(tr);
-                });
+                }).join('');
+
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load logs", err);
             }
         }
 
-        // Poll logs every 5 seconds
-        setInterval(loadLogs, 5000);
+        // Poll every 3s
+        setInterval(loadLogs, 3000);
         loadLogs();
     </script>
 </body>

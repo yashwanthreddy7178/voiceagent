@@ -1,83 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Agent Login</title>
+    <title>VoiceAgent | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #0f172a;
-            color: #e2e8f0;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+        :root {
+            --bg-color: #020617;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
         }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #6366f1;
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: #ec4899;
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(30px, 50px);
+            }
+        }
+
+        /* Login Card */
         .login-card {
-            background-color: #1e293b;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 1.5rem;
             width: 100%;
             max-width: 400px;
-            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: translateY(0);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; font-weight: 600; }
+
+        .login-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
         input {
             width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid #334155;
-            background-color: #0f172a;
+            padding: 0.875rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.75rem;
             color: white;
-            box-sizing: border-box;
+            font-size: 1rem;
+            transition: all 0.2s;
+            outline: none;
         }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
         button {
             width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
             border: none;
-            background-color: #3b82f6;
+            border-radius: 0.75rem;
             color: white;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
         }
-        button:hover { background-color: #2563eb; }
-        .error { color: #ef4444; margin-top: 1rem; display: none; }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px -5px var(--primary-glow);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        button:hover::after {
+            left: 100%;
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 1rem;
+            min-height: 1.25rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #475569;
+        }
     </style>
 </head>
+
 <body>
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
     <div class="login-card">
-        <h1>Admin Login</h1>
-        <input type="password" id="password" placeholder="Enter Admin Password">
-        <button onclick="login()">Login</button>
-        <p id="error" class="error">Invalid Password</p>
+        <div class="logo">VoiceAgent</div>
+        <p class="subtitle">Sign in to your workspace</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your access key" required>
+            </div>
+            <button type="submit" id="loginBtn">Sign In</button>
+            <div id="errorMsg" class="error-msg"></div>
+        </form>
+
+        <div class="footer">
+            &copy; 2024 VoiceAgent Inc.
+        </div>
     </div>
 
     <script>
-        async function login() {
+        const form = document.getElementById('loginForm');
+        const errorMsg = document.getElementById('errorMsg');
+        const btn = document.getElementById('loginBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const password = document.getElementById('password').value;
+
+            btn.innerHTML = 'Signing In...';
+            btn.disabled = true;
+            errorMsg.style.opacity = '0';
+
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password })
                 });
+
                 if (res.ok) {
                     localStorage.setItem('auth', 'true');
-                    window.location.href = '/static/dashboard.html';
+                    // Smooth exit animation
+                    document.querySelector('.login-card').style.transform = 'scale(0.95)';
+                    document.querySelector('.login-card').style.opacity = '0';
+                    setTimeout(() => {
+                        window.location.href = '/static/dashboard.html';
+                    }, 300);
                 } else {
-                    document.getElementById('error').style.display = 'block';
+                    throw new Error('Invalid password');
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Login failed');
+            } catch (err) {
+                errorMsg.textContent = 'Invalid credentials. Please try again.';
+                errorMsg.style.opacity = '1';
+                btn.innerHTML = 'Sign In';
+                btn.disabled = false;
             }
-        }
+        });
     </script>
 </body>
+
 </html>
